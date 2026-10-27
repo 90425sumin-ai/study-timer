@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>공부 전선</title>
-<meta name="description" content="작전(공부)과 휴식 시간마다 알림을 주고, 오늘의 전과로 소대·사단·전군 순위를 매기는 공부 타이머">
+<meta name="description" content="스톱워치로 공부 시간을 재고, 오늘의 전과로 소대·사단·전군 순위와 포인트를 쌓는 공부 기록장">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Black+Ops+One&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
-/* Layout: 작전 지도 위에 놓인 철판 패널들. 위쪽은 작전 시계와 내 전과, 아래로 보급 → 순위 → 교전 수칙 */
+/* Layout: 작전 지도 위에 놓인 철판 패널들. 위쪽은 스톱워치와 내 전과, 아래로 보급 → 순위 → 교전 수칙 */
 :root {
   --bg: #15180f;
   --plate: #22271a;
@@ -85,8 +85,6 @@ header p { color: var(--sand-soft); }
 }
 .btn:hover { filter: brightness(1.08); }
 .btn:disabled { opacity: .4; cursor: not-allowed; filter: none; }
-.btn.ghost { background: transparent; color: var(--sand-soft); border: 1px solid var(--line); font-family: var(--f-body); font-weight: 500; font-size: 14px; letter-spacing: 0; padding: 10px 14px; clip-path: none; }
-.btn.ghost.armed { color: var(--attack); border-color: var(--attack); }
 .notice { padding: 12px 14px; background: var(--brass-soft); border-left: 4px solid var(--brass); font-size: 14px; }
 .notice.bad { background: var(--attack-soft); border-left-color: var(--attack); color: var(--sand); }
 
@@ -97,50 +95,54 @@ header p { color: var(--sand-soft); }
 .reg-row input { width: 130px; letter-spacing: .3em; }
 .err { color: var(--attack); font-size: 14px; }
 
-/* 작전 시계 */
-.timer { --tone: var(--attack); --tone-soft: var(--attack-soft); justify-items: center; text-align: center; padding-top: 30px; }
-.timer.rest { --tone: var(--olive); --tone-soft: var(--olive-soft); }
-.timer::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 8px; background: repeating-linear-gradient(-45deg, var(--brass) 0 12px, var(--black) 12px 24px); }
-.timer.study::before { animation: march 1.2s linear infinite; background-size: 34px 8px; }
+/* 스톱워치 */
+.watch { --tone: var(--olive); --tone-soft: var(--olive-soft); justify-items: center; text-align: center; padding-top: 30px; }
+.watch.on { --tone: var(--attack); --tone-soft: var(--attack-soft); }
+.watch::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 8px; background: repeating-linear-gradient(-45deg, var(--brass) 0 12px, var(--black) 12px 24px); background-size: 34px 8px; }
+.watch.on::before { animation: march 1.2s linear infinite; }
 @keyframes march { to { background-position: 34px 0; } }
-.status { display: inline-flex; gap: 8px; align-items: center; font-family: var(--f-display); font-size: 16px; letter-spacing: .08em; padding: 4px 14px; border: 1px solid var(--tone); color: var(--tone); background: var(--tone-soft); }
-.status i { width: 8px; height: 8px; background: var(--tone); }
-.timer.study .status i { animation: blink 1s steps(2) infinite; }
+.status { display: inline-flex; gap: 8px; align-items: center; font-family: var(--f-display); font-size: 16px; letter-spacing: .08em; padding: 4px 14px; border: 1px solid var(--line); color: var(--sand-soft); }
+.status i { width: 8px; height: 8px; background: var(--sand-soft); }
+.watch.on .status { border-color: var(--tone); color: var(--tone); background: var(--tone-soft); }
+.watch.on .status i { background: var(--tone); animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
-.timer.idle .status, .timer.done .status { border-color: var(--line); color: var(--sand-soft); background: transparent; }
-.timer.idle .status i, .timer.done .status i { background: var(--sand-soft); }
-.scope { position: relative; width: min(100%, 300px); aspect-ratio: 1; max-width: 100%; display: grid; place-items: center; }
-.scope svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.scope { position: relative; width: min(100%, 320px); aspect-ratio: 1; max-width: 100%; display: grid; place-items: center; }
+.scope svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .scope .ring-bg { fill: none; stroke: var(--line); stroke-width: 6; }
-.scope .ring { fill: none; stroke: var(--tone); stroke-width: 6; transition: stroke-dashoffset .5s linear; }
+.scope .ring { fill: none; stroke: var(--tone); stroke-width: 6; transform: rotate(-90deg); transform-origin: 100px 100px; transition: stroke-dashoffset .5s linear; }
 .scope .tick { stroke: var(--line); stroke-width: 2; }
-.scope-center { display: grid; gap: 2px; justify-items: center; z-index: 1; }
-.clock { font-family: var(--f-stencil); font-size: clamp(56px, 15vw, 76px); line-height: 1; letter-spacing: .02em; font-variant-numeric: tabular-nums; color: var(--sand); }
-.round { font-family: var(--f-stencil); font-size: 12px; letter-spacing: .2em; color: var(--sand-soft); }
-.controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.timer .btn:not(.ghost) { background: var(--tone); color: var(--black); min-width: 170px; }
+.scope .sweep { transform-origin: 100px 100px; }
+.watch.on .scope .sweep { animation: sweep 4s linear infinite; }
+@keyframes sweep { to { transform: rotate(360deg); } }
+.scope-center { display: grid; gap: 4px; justify-items: center; z-index: 1; }
+.scope-center .lbl { font-family: var(--f-stencil); font-size: 11px; letter-spacing: .25em; color: var(--sand-soft); }
+.clock { font-family: var(--f-stencil); font-size: clamp(44px, 12vw, 58px); line-height: 1; font-variant-numeric: tabular-nums; color: var(--sand); }
+.session { font-family: var(--f-stencil); font-size: 15px; letter-spacing: .08em; color: var(--tone); font-variant-numeric: tabular-nums; }
+.watch .btn { background: var(--tone); color: var(--black); min-width: 200px; font-size: 20px; }
 .banner { width: 100%; padding: 10px 14px; background: var(--tone-soft); border-left: 4px solid var(--tone); color: var(--sand); font-weight: 700; text-align: left; }
-.setrow { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; width: 100%; border-top: 1px dashed var(--line); padding-top: 14px; }
-.setrow label { display: grid; gap: 4px; font-size: 13px; color: var(--sand-soft); justify-items: center; }
-.stepper { display: grid; grid-template-columns: 34px 58px 34px; border: 1px solid var(--line); background: var(--black); }
-.stepper button { border: 0; background: var(--plate-2); color: var(--sand); font-size: 18px; cursor: pointer; }
-.stepper button:disabled { opacity: .35; cursor: not-allowed; }
-.stepper output { display: grid; place-items: center; font-family: var(--f-stencil); font-size: 22px; color: var(--sand); font-variant-numeric: tabular-nums; }
 .notify-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; font-size: 13px; color: var(--sand-soft); }
+.notify-row button { background: transparent; color: var(--sand-soft); border: 1px solid var(--line); padding: 6px 12px; cursor: pointer; font-size: 13px; }
 
 /* 내 전과 */
+.points { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding: 14px; background: var(--black); border: 1px solid var(--brass); }
+.points b { font-family: var(--f-stencil); font-weight: 400; font-size: 40px; line-height: 1; color: var(--brass); font-variant-numeric: tabular-nums; }
+.points .unit { font-family: var(--f-display); color: var(--brass); font-size: 18px; }
+.points small { font-size: 13px; color: var(--sand-soft); }
 .ranks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .rank-tile { background: var(--black); border: 1px solid var(--line); padding: 12px; display: grid; gap: 2px; }
+.rank-tile.hit { border-color: var(--olive); }
 .rank-tile span { font-size: 12px; color: var(--sand-soft); }
-.rank-tile b { font-family: var(--f-stencil); font-weight: 400; font-size: 30px; line-height: 1.1; color: var(--brass); font-variant-numeric: tabular-nums; }
+.rank-tile b { font-family: var(--f-stencil); font-weight: 400; font-size: 30px; line-height: 1.1; color: var(--sand); font-variant-numeric: tabular-nums; }
+.rank-tile.hit b { color: var(--olive); }
 .rank-tile small { font-size: 12px; color: var(--sand-soft); font-variant-numeric: tabular-nums; }
 .mystats { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: var(--sand-soft); }
 .mystats b { color: var(--sand); font-variant-numeric: tabular-nums; }
 .medals { display: flex; flex-wrap: wrap; gap: 6px; }
 .medal { font-size: 13px; padding: 3px 10px; border: 1px dashed var(--line); color: var(--sand-soft); }
 .medal.on { border: 1px solid var(--brass); background: var(--brass-soft); color: var(--brass); font-weight: 700; }
-.brief { display: grid; gap: 8px; }
+.brief { display: grid; gap: 8px; margin: 0; padding-left: 20px; }
 .brief li { color: var(--sand-soft); }
+.brief b { color: var(--sand); }
 
 /* 순위 */
 .tabs { display: flex; gap: 0; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
@@ -151,17 +153,19 @@ header p { color: var(--sand-soft); }
 .board li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; background: var(--black); border-left: 3px solid var(--line); font-size: 14px; }
 .board li.me { border-left-color: var(--attack); background: var(--attack-soft); }
 .board .pos { font-family: var(--f-stencil); font-size: 18px; color: var(--sand-soft); font-variant-numeric: tabular-nums; }
+.board li.zone { border-left-color: var(--olive); }
 .board li.top { border-left-color: var(--brass); }
 .board li.top .pos { color: var(--brass); }
+.board .live { display: inline-block; margin-left: 6px; font-size: 11px; color: var(--attack); border: 1px solid var(--attack); padding: 0 5px; }
 .board .mins { font-family: var(--f-stencil); font-size: 14px; color: var(--sand-soft); font-variant-numeric: tabular-nums; }
 .board li.gap { display: block; text-align: center; color: var(--sand-soft); background: transparent; border: 0; padding: 0; }
+.board li.cut { display: block; background: transparent; border: 0; border-top: 1px dashed var(--olive); color: var(--olive); font-size: 12px; padding: 2px 0 0; text-align: right; }
 
 /* 보급 상자 */
 .deck { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .crate {
   aspect-ratio: 1; max-width: 100%; cursor: pointer; display: grid; place-items: center;
-  font-family: var(--f-stencil); font-size: 22px; color: var(--brass);
-  border: 2px solid var(--brass);
+  font-family: var(--f-stencil); font-size: 22px; color: var(--brass); border: 2px solid var(--brass);
   background:
     linear-gradient(45deg, transparent 46%, rgba(215, 169, 59, .35) 47% 53%, transparent 54%),
     linear-gradient(-45deg, transparent 46%, rgba(215, 169, 59, .35) 47% 53%, transparent 54%),
@@ -182,10 +186,16 @@ header p { color: var(--sand-soft); }
 
 .rules ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--sand-soft); }
 .rules b { color: var(--sand); }
+.pt-table { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pt-table div { background: var(--black); border: 1px solid var(--line); padding: 10px 12px; display: grid; }
+.pt-table span { font-size: 12px; color: var(--sand-soft); }
+.pt-table b { font-family: var(--f-display); font-size: 18px; }
+.pt-table em { font-style: normal; font-family: var(--f-stencil); color: var(--brass); font-size: 22px; }
 footer { text-align: center; font-family: var(--f-stencil); font-size: 11px; letter-spacing: .3em; color: var(--line); }
+@media (max-width: 480px) { .pt-table, .ranks { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) {
   .scope .ring { transition: none; }
-  .timer.study::before, .timer.study .status i { animation: none; }
+  .watch.on::before, .watch.on .status i, .watch.on .scope .sweep { animation: none; }
   .crate:hover:not(:disabled) { transform: none; }
 }
 </style>
@@ -196,7 +206,7 @@ footer { text-align: center; font-family: var(--f-stencil); font-size: 11px; let
     <div>
       <span class="callsign">OPERATION · STUDY FRONT</span>
       <h1>공부 전선</h1>
-      <p>작전 시간과 휴식 시간을 정하면 바뀔 때마다 무전으로 알려 줘요.</p>
+      <p>공부를 시작할 때 누르고 끝날 때 누르세요. 버틴 시간만큼 전과가 쌓여요.</p>
     </div>
     <div class="me-box"><span class="tag" id="meChip">작전 대기</span><button class="link" type="button" id="logoutBtn" hidden>다른 병사로 바꾸기</button></div>
   </header>
@@ -217,8 +227,8 @@ footer { text-align: center; font-family: var(--f-stencil); font-size: 11px; let
   </section>
 
   <div class="two">
-    <section class="plate timer idle" id="timerCard" aria-label="작전 타이머">
-      <span class="status"><i></i><span id="phaseLabel">작전 대기</span></span>
+    <section class="plate watch" id="watchCard" aria-label="공부 스톱워치">
+      <span class="status"><i></i><span id="statusLabel">작전 대기</span></span>
       <div class="scope">
         <svg viewBox="0 0 200 200" aria-hidden="true">
           <circle class="ring-bg" cx="100" cy="100" r="92"></circle>
@@ -227,52 +237,46 @@ footer { text-align: center; font-family: var(--f-stencil); font-size: 11px; let
           <line class="tick" x1="100" y1="182" x2="100" y2="198"></line>
           <line class="tick" x1="2" y1="100" x2="18" y2="100"></line>
           <line class="tick" x1="182" y1="100" x2="198" y2="100"></line>
+          <g class="sweep"><line x1="100" y1="100" x2="100" y2="22" stroke="var(--tone)" stroke-width="1.5" opacity=".5"></line></g>
         </svg>
         <div class="scope-center">
-          <div class="clock" id="clock" role="timer">50:00</div>
-          <span class="round" id="roundLabel"></span>
+          <span class="lbl">TODAY</span>
+          <div class="clock" id="clock" role="timer" aria-label="오늘 공부한 시간">00:00:00</div>
+          <span class="session" id="sessionClock" hidden></span>
         </div>
       </div>
-      <p class="muted" id="nextLabel"></p>
+      <p class="muted" id="watchHint">작전 개시를 누르면 스톱워치가 돌아가요.</p>
       <div class="banner" id="banner" hidden></div>
-      <div class="controls">
-        <button class="btn" type="button" id="mainBtn">작전 개시</button>
-        <button class="btn ghost" type="button" id="skipBtn" hidden>다음으로 넘기기</button>
-        <button class="btn ghost" type="button" id="resetBtn" hidden>작전 취소</button>
-      </div>
-      <div class="setrow">
-        <label>작전(공부)<span class="stepper"><button type="button" data-k="study" data-d="-5" aria-label="작전 시간 줄이기">−</button><output id="vStudy">50</output><button type="button" data-k="study" data-d="5" aria-label="작전 시간 늘리기">+</button></span>분</label>
-        <label>휴식<span class="stepper"><button type="button" data-k="rest" data-d="-1" aria-label="휴식 시간 줄이기">−</button><output id="vRest">10</output><button type="button" data-k="rest" data-d="1" aria-label="휴식 시간 늘리기">+</button></span>분</label>
-        <label>출격 횟수<span class="stepper"><button type="button" data-k="rounds" data-d="-1" aria-label="출격 횟수 줄이기">−</button><output id="vRounds">4</output><button type="button" data-k="rounds" data-d="1" aria-label="출격 횟수 늘리기">+</button></span>회</label>
-      </div>
-      <div class="notify-row"><span id="notifyText"></span><button class="btn ghost" type="button" id="notifyBtn" hidden>무전(알림) 허용하기</button></div>
-      <p class="muted">작전 시간을 끝까지 버텨야 전과로 기록돼요. 이 창은 닫지 말고 열어 두세요.</p>
+      <button class="btn" type="button" id="mainBtn">작전 개시</button>
+      <div class="notify-row"><span id="notifyText"></span><button type="button" id="notifyBtn" hidden>무전(알림) 허용하기</button></div>
+      <p class="muted">한 번에 최대 3시간까지 기록돼요. 다른 기기에서 열어도 같은 스톱워치가 이어져요.</p>
     </section>
 
     <section class="plate" id="myCard" aria-labelledby="myTitle">
-      <h2 id="myTitle"><span class="code">REPORT</span>오늘 내 전과</h2>
-      <div id="rankArea">
+      <h2 id="myTitle"><span class="code">REPORT</span><span id="myTitleText">오늘 내 전과</span></h2>
+      <div id="rankArea" style="display:grid;gap:12px">
+        <div class="points" aria-label="누적 포인트"><b id="ptTotal">0</b><span class="unit">P</span><small id="ptNote">누적 포인트</small></div>
         <p class="muted" id="rankBasis">전과를 불러오는 중이에요.</p>
-        <div class="ranks" style="margin-top:12px">
-          <div class="rank-tile"><span>전군 (학교)</span><b id="rSchool">-</b><small id="pSchool"></small></div>
-          <div class="rank-tile"><span>사단 (학년)</span><b id="rGrade">-</b><small id="pGrade"></small></div>
-          <div class="rank-tile"><span>소대 (반)</span><b id="rClass">-</b><small id="pClass"></small></div>
+        <div class="ranks">
+          <div class="rank-tile" id="tileSchool"><span>전군 (학교)</span><b id="rSchool">-</b><small id="pSchool"></small></div>
+          <div class="rank-tile" id="tileGrade"><span>사단 (학년)</span><b id="rGrade">-</b><small id="pGrade"></small></div>
+          <div class="rank-tile" id="tileClass"><span>소대 (반)</span><b id="rClass">-</b><small id="pClass"></small></div>
         </div>
-        <div class="mystats" style="margin-top:12px"><span>오늘 전과 <b id="myToday">0분</b></span><span id="myFrozen" hidden></span></div>
-        <div class="medals" style="margin-top:12px" aria-label="이번 주기 보급">
+        <div class="mystats"><span>지금 순위대로면 오늘 <b id="ptIfNow">0P</b></span><span id="myFrozen" hidden></span></div>
+        <div class="medals" aria-label="이번 주기 보급">
           <span class="medal" id="t20">상위 20% · 보급 20분</span>
           <span class="medal" id="t10">상위 10% · 기습 5명</span>
           <span class="medal" id="t3">상위 3% · 보급 상자</span>
         </div>
-        <p class="muted" id="cycleInfo" style="margin-top:12px"></p>
+        <p class="muted" id="cycleInfo"></p>
       </div>
-      <div id="briefArea" hidden>
+      <div id="briefArea" hidden style="display:grid;gap:12px">
         <ol class="brief">
-          <li><b>작전 시간</b>(공부)과 <b>휴식 시간</b>, <b>출격 횟수</b>를 정하세요.</li>
-          <li><b>작전 개시</b>를 누르고, 브라우저가 알림을 물어보면 <b>허용</b>을 누르세요.</li>
-          <li>작전과 휴식이 바뀔 때마다 소리와 알림으로 무전이 와요.</li>
+          <li>공부를 시작할 때 <b>작전 개시</b>를 누르세요.</li>
+          <li>공부가 끝나면 <b>작전 종료</b>를 누르세요. 오늘 공부한 시간이 쌓여요.</li>
+          <li>오늘 기록은 밤 12시에 0으로 돌아가요.</li>
         </ol>
-        <p class="notice" style="margin-top:12px">전과 순위, 보급, 기습, 보급 상자는 곧 열려요. 지금은 타이머만 쓸 수 있어요.</p>
+        <p class="notice">전과 순위, 포인트, 보급은 곧 열려요. 지금은 스톱워치만 쓸 수 있고 기록은 이 기기에만 남아요.</p>
       </div>
     </section>
   </div>
@@ -305,18 +309,24 @@ footer { text-align: center; font-family: var(--f-stencil); font-size: 11px; let
       <button class="tab" type="button" id="tab-class" data-scope="class" aria-pressed="false">소대 (반)</button>
     </div>
     <ol class="board" id="board"></ol>
-    <p class="muted" id="boardEmpty">오늘은 아직 작전을 마친 병사가 없어요. 첫 전과를 올려 보세요.</p>
+    <p class="muted" id="boardEmpty">오늘은 아직 공부한 병사가 없어요. 첫 전과를 올려 보세요.</p>
   </section>
 
   <section class="plate rules" id="rulesCard" aria-labelledby="rulesTitle">
     <h2 id="rulesTitle"><span class="code">RULES OF ENGAGEMENT</span>교전 수칙</h2>
+    <div class="pt-table">
+      <div><span>전군 (학교)</span><b>30등 안</b><em>+10P</em></div>
+      <div><span>사단 (학년)</span><b>20등 안</b><em>+6P</em></div>
+      <div><span>소대 (반)</span><b>5등 안</b><em>+2P</em></div>
+    </div>
     <ul>
-      <li><b>전과는 매일 0시에 0분으로 돌아가요.</b> 순위는 오늘 공부한 시간으로 매기고, 작전을 마칠 때마다 바로 바뀌어요.</li>
+      <li><b>전과는 매일 밤 12시에 0으로 돌아가요.</b> 순위는 오늘 공부한 시간으로 매기고, 스톱워치가 도는 동안에도 실시간으로 바뀌어요.</li>
+      <li><b>포인트는 밤 12시의 최종 순위로 쌓여요.</b> 세 범위를 따로 계산해서, 모두 들면 하루에 18P를 받아요. 같은 시간이면 같은 등수예요.</li>
       <li><b>보급은 4일에 한 번이에요.</b> 4일째 되는 날 밤 12시의 전군(학교) 최종 순위로 다음 4일 동안의 보급이 정해져요.</li>
       <li><b>상위 20% · 보급 20분:</b> 보급을 받은 첫날 전과에 20분이 더해져요. 공부하지 않아도 들어가요.</li>
       <li><b>상위 10% · 기습:</b> 다음 4일 동안 다른 병사 5명까지 고를 수 있어요. 고른 날 그 병사가 공부한 시간은 순위에 들어가지 않아요. 누가 골랐는지는 교관(선생님)만 볼 수 있어요.</li>
       <li><b>상위 3% · 보급 상자:</b> 상자 10개 중 1개를 열어요. 3개에는 소정의 간식, 7개는 꽝이에요. 당첨되면 이 화면을 선생님께 보여 주세요.</li>
-      <li>상위 3%는 10%와 20% 보급도 함께 받아요.</li>
+      <li>스톱워치는 한 번에 최대 3시간까지 기록돼요. 더 하려면 종료하고 다시 개시하세요.</li>
     </ul>
   </section>
 
@@ -324,21 +334,25 @@ footer { text-align: center; font-family: var(--f-stencil); font-size: 11px; let
 </div>
 
 <script>
-// 순위 서버 주소 (서버를 배포하면 채워져요. 비어 있으면 타이머만 동작해요)
+// 순위 서버 주소 (서버를 배포하면 채워져요. 비어 있으면 스톱워치만 이 기기에서 동작해요)
 const API = "__API_URL__";
 const SERVER = /^https:\/\//.test(API);
+const SESSION_CAP_MS = 3 * 3600e3;
 
 const $ = id => document.getElementById(id);
 function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
 function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 function drop(k) { try { localStorage.removeItem(k); } catch {} }
-const hm = m => { m = Math.round(m); return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? " " + (m % 60) + "분" : ""}` : `${m}분`; };
+const hm = m => { m = Math.floor(m); return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? " " + (m % 60) + "분" : ""}` : `${m}분`; };
+const hms = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(v => String(v).padStart(2, "0")).join(":"); };
 const shortDay = k => { const [, m, d] = String(k).split("-"); return `${Number(m)}/${Number(d)}`; };
 const label = s => s ? `${s.g ?? s.grade}학년 ${s.c ?? s.cls}반 ${s.n ?? s.num}번` : "알 수 없음";
 const keyLabel = k => { const [g, c, n] = String(k).split("-"); return `${g}학년 ${c}반 ${n}번`; };
+const kstDay = (t = Date.now()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t));
+const kstMidnight = (t = Date.now()) => { const [y, m, d] = kstDay(t).split("-").map(Number); return Date.UTC(y, m - 1, d) - 9 * 3600e3; };
 
 let token = load("sl-token");
-let ST = null;
+let ST = null, clockOffset = 0, busy = false;
 let scope = "school";
 
 async function api(action, data = {}) {
@@ -352,9 +366,9 @@ async function refresh() {
   try {
     const r = await api("state");
     if (!r.ok) throw new Error(r.error);
-    ST = r; offline("");
+    ST = r; ST.receivedAt = Date.now(); clockOffset = r.now - Date.now(); offline("");
     if (token && !r.my) { token = null; drop("sl-token"); }
-  } catch { offline("전과 서버와 통신이 끊겼어요. 인터넷 연결을 확인해 주세요. 타이머는 그대로 쓸 수 있어요."); }
+  } catch { offline("전과 서버와 통신이 끊겼어요. 인터넷 연결을 확인해 주세요."); }
   renderAll();
 }
 
@@ -380,9 +394,57 @@ $("regBtn").addEventListener("click", async () => {
 });
 $("logoutBtn").addEventListener("click", () => { token = null; drop("sl-token"); renderAll(); });
 
+// ---------- 스톱워치 상태 ----------
+// 서버 모드: 서버가 기억하는 시작 시각 / 로컬 모드: 이 기기에만 저장
+let local = load("sw-local") || { day: kstDay(), doneMs: 0, start: null };
+function localFix() { if (local.day !== kstDay()) { local = { day: kstDay(), doneMs: 0, start: local.start && Date.now() - local.start < SESSION_CAP_MS ? kstMidnight() : null }; save("sw-local", local); } }
+const now = () => Date.now() + clockOffset;
+function watchState() {
+  if (SERVER) {
+    const my = token && ST?.my;
+    if (!my) return { running: false, today: 0, session: 0 };
+    const start = my.sessionStart;
+    const session = start ? Math.min(SESSION_CAP_MS, now() - start) : 0;
+    const sinceMidnight = start ? Math.max(0, Math.min(start + session, now()) - Math.max(start, kstMidnight(now()))) : 0;
+    const dayChanged = kstDay(now()) !== ST.today;
+    return { running: !!start, today: (dayChanged ? 0 : my.todayDone * 60e3) + sinceMidnight, session };
+  }
+  localFix();
+  const session = local.start ? Math.min(SESSION_CAP_MS, Date.now() - local.start) : 0;
+  return { running: !!local.start, today: local.doneMs + session, session };
+}
+
+async function toggleWatch() {
+  if (busy) return;
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch {}
+  askNotify();
+  const st = watchState();
+  if (!SERVER) {
+    if (st.running) { local.doneMs += st.session; local.start = null; tell("작전 종료", `이번 작전 ${hm(st.session / 60e3)} 기록했어요.`, "stop"); }
+    else { local.start = Date.now(); tell("작전 개시", "스톱워치가 돌아가요. 끝나면 작전 종료를 누르세요.", "start"); }
+    save("sw-local", local); renderAll(); return;
+  }
+  if (!token || !ST?.my) { $("watchHint").textContent = "먼저 위에서 신병 등록을 해 주세요."; return; }
+  busy = true; $("mainBtn").disabled = true;
+  try {
+    if (st.running) {
+      const r = await api("stop");
+      if (r.ok) tell("작전 종료", `이번 작전 ${hm(r.minutes)} 전과로 기록했어요.`, "stop");
+      else throw 0;
+    } else {
+      const r = await api("start");
+      if (r.ok) { ST.my.sessionStart = r.start; clockOffset = r.now - Date.now(); tell("작전 개시", "스톱워치가 돌아가요. 끝나면 작전 종료를 누르세요.", "start"); }
+      else throw 0;
+    }
+  } catch { offline("서버에 연결하지 못했어요. 잠시 뒤 다시 눌러 주세요."); }
+  busy = false; $("mainBtn").disabled = false;
+  await refresh();
+}
+$("mainBtn").addEventListener("click", toggleWatch);
+
 // ---------- 화면 ----------
 function rankOf(list, key) {
-  const me = list.find(s => s.k === key); if (!me) return null;
+  const me = list.find(s => s.k === key); if (!me || !me.m) return null;
   return { rank: 1 + list.filter(s => s.m > me.m).length, of: list.length };
 }
 function renderAll() {
@@ -392,29 +454,33 @@ function renderAll() {
   $("meChip").textContent = my ? label(my) : SERVER ? "신병 등록 필요" : "작전 대기";
   $("rankArea").hidden = !SERVER;
   $("briefArea").hidden = SERVER;
-  $("myTitle").lastChild.textContent = SERVER ? "오늘 내 전과" : "작전 브리핑";
+  $("myTitleText").textContent = SERVER ? "오늘 내 전과" : "작전 브리핑";
   $("boardCard").hidden = !SERVER;
   $("rulesCard").hidden = !SERVER;
-  renderMy(my); renderBoard(my); renderCard(my); renderFreeze(my); renderTimer();
+  renderMy(my); renderBoard(my); renderCard(my); renderFreeze(my); renderWatch();
 }
+const RULES = { School: 30, Grade: 20, Class: 5 };
 function renderMy(my) {
   if (!SERVER) return;
   if (ST) {
     $("cycleInfo").textContent = `이번 보급 주기 ${shortDay(ST.cycleStart)}~${shortDay(ST.cycleEnd)} · ${shortDay(ST.cycleEnd)} 밤 12시 최종 순위로 다음 보급이 정해져요.`;
-    $("rankBasis").textContent = `${shortDay(ST.today)} 오늘 공부한 시간 기준이에요. 내일 0시에 0분으로 돌아가요.`;
+    $("rankBasis").textContent = `${shortDay(ST.today)} 오늘 공부한 시간 기준 실시간 순위예요. 밤 12시에 최종 순위로 포인트를 받고 0으로 돌아가요.`;
   }
   const tiles = [["School", () => true], ["Grade", s => s.g === my.grade], ["Class", s => s.g === my.grade && s.c === my.cls]];
   if (!my || !ST) {
-    tiles.forEach(([k]) => { $("r" + k).textContent = "-"; $("p" + k).textContent = ""; });
-    $("myToday").textContent = "0분"; ["t20", "t10", "t3"].forEach(x => $(x).classList.remove("on")); $("myFrozen").hidden = true; return;
+    tiles.forEach(([k]) => { $("r" + k).textContent = "-"; $("p" + k).textContent = ""; $("tile" + k).classList.remove("hit"); });
+    $("ptTotal").textContent = "0"; $("ptNote").textContent = "누적 포인트"; $("ptIfNow").textContent = "0P";
+    ["t20", "t10", "t3"].forEach(x => $(x).classList.remove("on")); $("myFrozen").hidden = true; return;
   }
-  const meRow = ST.list.find(s => s.k === my.key);
   tiles.forEach(([k, f]) => {
     const r = rankOf(ST.list.filter(f), my.key);
     $("r" + k).textContent = r ? `${r.rank}위` : "-";
-    $("p" + k).textContent = r ? `${r.of}명 중 · 상위 ${Math.max(1, Math.round(r.rank / r.of * 100))}%` : "";
+    $("p" + k).textContent = r ? `${r.of}명 중 · ${RULES[k]}등 안이면 포인트` : `아직 기록 없음 · ${RULES[k]}등 안이면 포인트`;
+    $("tile" + k).classList.toggle("hit", !!r && r.rank <= RULES[k]);
   });
-  $("myToday").textContent = hm(meRow?.m || 0);
+  $("ptTotal").textContent = my.points;
+  $("ptNote").textContent = my.pointsYesterday ? `누적 포인트 · 어제 +${my.pointsYesterday}P` : "누적 포인트";
+  $("ptIfNow").textContent = `+${my.pointsIfNow}P`;
   $("t20").classList.toggle("on", my.tiers.t20); $("t10").classList.toggle("on", my.tiers.t10); $("t3").classList.toggle("on", my.tiers.t3);
   $("myFrozen").hidden = !my.frozenToday;
   $("myFrozen").textContent = "오늘은 기습을 당해 공부한 시간이 순위에 들어가지 않아요.";
@@ -423,22 +489,26 @@ function renderBoard(my) {
   if (!SERVER) return;
   document.querySelectorAll(".tab").forEach(t => { t.setAttribute("aria-pressed", t.dataset.scope === scope); t.disabled = !my && t.dataset.scope !== "school"; });
   if (!my && scope !== "school") scope = "school";
+  const cutAt = { school: 30, grade: 20, class: 5 }[scope];
   const ol = $("board"); ol.innerHTML = "";
   let list = ST ? ST.list : [];
   if (my && scope !== "school") list = list.filter(s => s.g === my.grade && (scope === "grade" || s.c === my.cls));
   const rows = list.filter(s => s.m > 0).sort((a, b) => b.m - a.m || (a.k < b.k ? -1 : 1));
   $("boardEmpty").hidden = rows.length > 0;
   const myIdx = my ? rows.findIndex(s => s.k === my.key) : -1;
-  let last = -1;
+  const showTop = Math.max(10, cutAt);
+  let last = -1, cutDrawn = false;
   rows.forEach((s, i) => {
-    if (!(i < 10 || (myIdx >= 0 && Math.abs(i - myIdx) <= 1))) return;
+    if (!(i < showTop || (myIdx >= 0 && Math.abs(i - myIdx) <= 1))) return;
+    const rank = 1 + rows.filter(r => r.m > s.m).length;
+    if (!cutDrawn && rank > cutAt) { const c = document.createElement("li"); c.className = "cut"; c.textContent = `여기까지 ${cutAt}등 · 포인트 지급선`; ol.appendChild(c); cutDrawn = true; }
     if (i - last > 1) { const g = document.createElement("li"); g.className = "gap"; g.textContent = "⋯"; ol.appendChild(g); }
     last = i;
-    const rank = 1 + rows.filter(r => r.m > s.m).length;
     const li = document.createElement("li");
-    li.className = (my && s.k === my.key ? "me " : "") + (rank <= 3 ? "top" : "");
+    li.className = [my && s.k === my.key ? "me" : "", rank <= 3 ? "top" : rank <= cutAt ? "zone" : ""].join(" ");
     const pos = document.createElement("span"); pos.className = "pos"; pos.textContent = String(rank).padStart(2, "0");
     const who = document.createElement("span"); who.textContent = label(s) + (my && s.k === my.key ? " (나)" : "");
+    if (s.on) { const lv = document.createElement("span"); lv.className = "live"; lv.textContent = "작전 중"; who.appendChild(lv); }
     const mins = document.createElement("span"); mins.className = "mins"; mins.textContent = hm(s.m);
     li.append(pos, who, mins); ol.appendChild(li);
   });
@@ -517,32 +587,19 @@ const swReady = ("serviceWorker" in navigator && location.protocol.startsWith("h
   ? navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready).catch(() => null) : Promise.resolve(null);
 function renderNotify() {
   const t = $("notifyText"), b = $("notifyBtn");
-  if (!("Notification" in window)) { t.textContent = "이 브라우저는 알림을 지원하지 않아 소리와 화면으로 알려 줘요."; b.hidden = true; return; }
+  if (!("Notification" in window)) { t.textContent = ""; b.hidden = true; return; }
   const p = Notification.permission;
   b.hidden = p !== "default";
-  t.textContent = p === "granted" ? "무전(알림)이 켜져 있어요." : p === "denied" ? "알림이 차단되어 있어요. 주소창 왼쪽 자물쇠를 눌러 알림을 허용해 주세요." : "다른 창을 볼 때도 무전을 받으려면 허용해 주세요.";
+  t.textContent = p === "granted" ? "무전(알림) 켜짐 · 1시간마다, 3시간이 되면 알려 줘요." : p === "denied" ? "알림이 차단되어 있어요. 주소창 왼쪽 자물쇠에서 허용할 수 있어요." : "1시간마다 무전을 받으려면";
 }
 async function askNotify() { if ("Notification" in window && Notification.permission === "default") { try { await Notification.requestPermission(); } catch {} renderNotify(); } }
 $("notifyBtn").addEventListener("click", askNotify);
 
-// ---------- 작전 타이머 ----------
-const LIM = { study: [5, 180], rest: [1, 60], rounds: [1, 12] };
-const S = Object.assign({ study: 50, rest: 10, rounds: 4 }, load("sl-settings") || {});
-let R = load("sl-run") || { phase: "idle" };
-let audio = null, resetArmed = null;
-const RING = 2 * Math.PI * 92;
-$("ring").style.strokeDasharray = RING;
-const active = () => R.phase === "study" || R.phase === "rest";
-const phaseLen = p => (p === "study" ? S.study : S.rest) * 60;
-const leftSec = () => !active() ? S.study * 60 : R.running ? Math.max(0, Math.ceil((R.endAt - Date.now()) / 1000)) : R.left;
-const persist = () => save("sl-run", R);
-const clockStr = t => new Date(t).toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
-
-// 나팔 소리 느낌의 짧은 신호음
+let audio = null;
 function chime(kind) {
   if (!audio) return;
   try {
-    const notes = kind === "rest" ? [784, 659, 523] : kind === "done" ? [523, 659, 784, 1047, 784, 1047] : [523, 523, 784];
+    const notes = kind === "stop" ? [784, 659, 523] : kind === "hour" ? [659, 784] : [523, 523, 784];
     notes.forEach((f, i) => {
       const o = audio.createOscillator(), g = audio.createGain();
       o.type = "square"; o.frequency.value = f; o.connect(g); g.connect(audio.destination);
@@ -552,97 +609,48 @@ function chime(kind) {
     });
   } catch {}
 }
-async function tell(title, body, kind) {
+async function tell(title, body, kind, push) {
   chime(kind);
-  if (navigator.vibrate) { try { navigator.vibrate([300, 150, 300]); } catch {} }
   const b = $("banner"); b.textContent = `📻 ${title} · ${body}`; b.hidden = false;
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-  const opts = { body, tag: "study-front", renotify: true, requireInteraction: true };
+  if (!push || !("Notification" in window) || Notification.permission !== "granted") return;
+  const opts = { body, tag: "study-front", renotify: true };
   try { const reg = await swReady; if (reg) return reg.showNotification(title, opts); new Notification(title, opts); } catch {}
 }
 
-async function serverStart() {
-  if (!SERVER || !token) return;
-  try { await api("start", { minutes: S.study }); } catch {}
-}
-async function serverFinish(retry = true) {
-  if (!SERVER || !token) return;
-  try {
-    const r = await api("finish");
-    if (r.ok) { $("banner").textContent += " · 전과로 기록했어요."; refresh(); }
-    else if (r.error === "too_early" && retry) setTimeout(() => serverFinish(false), 70000);
-  } catch {}
+// ---------- 스톱워치 화면 ----------
+const RING = 2 * Math.PI * 92;
+$("ring").style.strokeDasharray = RING;
+let lastHour = null, capNotified = false;
+function renderWatch() {
+  const st = watchState();
+  $("watchCard").className = "plate watch" + (st.running ? " on" : "");
+  $("statusLabel").textContent = st.running ? "작전 수행 중" : "작전 대기";
+  $("clock").textContent = hms(st.today);
+  $("sessionClock").hidden = !st.running;
+  $("sessionClock").textContent = `이번 작전 ${hms(st.session)}`;
+  // 링은 1시간마다 한 바퀴
+  $("ring").style.strokeDashoffset = RING * (1 - ((st.today % 3600e3) / 3600e3));
+  $("mainBtn").textContent = st.running ? "작전 종료" : "작전 개시";
+  $("watchHint").textContent = st.running ? "공부가 끝나면 작전 종료를 누르세요." : (SERVER && !(token && ST?.my) ? "먼저 위에서 신병 등록을 해 주세요." : "작전 개시를 누르면 스톱워치가 돌아가요.");
+  document.title = st.running ? `${hms(st.session)} 작전 중 · 공부 전선` : "공부 전선";
+  // 1시간마다 무전, 3시간이 되면 자동 종료 안내
+  if (st.running) {
+    const h = Math.floor(st.session / 3600e3);
+    if (lastHour !== null && h > lastHour && h < 3) tell(`${h}시간 돌파`, `이번 작전 ${h}시간째 버티는 중이에요.`, "hour", true);
+    lastHour = h;
+    if (st.session >= SESSION_CAP_MS && !capNotified) {
+      capNotified = true;
+      tell("3시간 작전 완료", "한 번에 3시간까지 기록돼요. 계속하려면 작전 종료 후 다시 개시하세요.", "stop", true);
+    }
+  } else { lastHour = null; capNotified = false; }
 }
 
-function advance(at, quiet) {
-  if (R.phase === "study") {
-    if (!quiet) serverFinish();
-    if (R.round >= S.rounds) { R = { phase: "done", round: R.round }; if (!quiet) tell("작전 완료!", `${S.rounds}회 출격을 모두 마쳤어요. 수고했어요, 병사.`, "done"); }
-    else { R = { ...R, phase: "rest", endAt: at + S.rest * 60000 }; if (!quiet) tell("휴식하라", `${R.round}차 작전 완료! ${S.rest}분 동안 참호에서 쉬어요.`, "rest"); }
-  } else if (R.phase === "rest") {
-    R = { ...R, phase: "study", round: R.round + 1, endAt: at + S.study * 60000 };
-    if (!quiet) { serverStart(); tell("출격하라", `${R.round}차 작전 ${S.study}분 시작!`, "study"); }
-  }
-  persist();
-}
-function tick() {
-  if (active() && R.running) while (active() && R.running && Date.now() >= R.endAt) advance(R.endAt, Date.now() - R.endAt > 90000);
-  renderTimer();
-}
-function renderTimer() {
-  $("timerCard").className = "plate timer " + R.phase;
-  const left = leftSec();
-  const mm = String(Math.floor(left / 60)).padStart(2, "0"), ss = String(left % 60).padStart(2, "0");
-  $("clock").textContent = R.phase === "done" ? "CLEAR" : `${mm}:${ss}`;
-  $("phaseLabel").textContent = { idle: "작전 대기", study: "작전 수행 중", rest: "참호 휴식", done: "작전 완료" }[R.phase] + (active() && !R.running ? " (정지)" : "");
-  $("roundLabel").textContent = active() || R.phase === "done" ? `SORTIE ${R.round} / ${S.rounds}` : `SORTIE × ${S.rounds}`;
-  const frac = active() ? 1 - left / phaseLen(R.phase) : R.phase === "done" ? 1 : 0;
-  $("ring").style.strokeDashoffset = RING * (1 - frac);
-  $("nextLabel").textContent = active() && R.running
-    ? (R.phase === "study" ? `${clockStr(R.endAt)}에 ${R.round >= S.rounds ? "작전이 끝나요" : "휴식 명령이 내려와요"}` : `${clockStr(R.endAt)}에 다시 출격해요`)
-    : active() ? "작전이 멈춰 있어요" : (SERVER && !token ? "위에서 신병 등록을 해야 전과가 기록돼요" : `작전 ${S.study}분 · 휴식 ${S.rest}분 · ${S.rounds}회 출격`);
-  $("mainBtn").textContent = !active() ? "작전 개시" : R.running ? "작전 정지" : "작전 재개";
-  $("skipBtn").hidden = !active();
-  $("resetBtn").hidden = R.phase === "idle";
-  $("resetBtn").textContent = R.phase === "done" ? "새 작전 준비" : resetArmed ? "정말 취소할까요?" : "작전 취소";
-  $("resetBtn").classList.toggle("armed", !!resetArmed);
-  if (!active()) $("banner").hidden = true;
-  $("vStudy").textContent = S.study; $("vRest").textContent = S.rest; $("vRounds").textContent = S.rounds;
-  document.querySelectorAll(".stepper button").forEach(b => b.disabled = active());
-  document.title = active() && R.running ? `${mm}:${ss} ${R.phase === "study" ? "작전 중" : "휴식 중"} · 공부 전선` : "공부 전선";
-}
-$("mainBtn").addEventListener("click", () => {
-  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch {}
-  askNotify();
-  if (!active()) { R = { phase: "study", round: 1, running: true, endAt: Date.now() + S.study * 60000 }; chime("study"); serverStart(); }
-  else if (R.running) { R.left = leftSec(); R.running = false; }
-  else { R.running = true; R.endAt = Date.now() + R.left * 1000; }
-  persist(); renderTimer();
-});
-$("skipBtn").addEventListener("click", () => {
-  if (!active()) return;
-  // 작전을 건너뛰면 전과로 기록되지 않아요
-  if (R.phase === "study") R = R.round >= S.rounds ? { phase: "done", round: R.round } : { ...R, phase: "rest", running: true, endAt: Date.now() + S.rest * 60000 };
-  else { R = { ...R, phase: "study", round: R.round + 1, running: true, endAt: Date.now() + S.study * 60000 }; serverStart(); }
-  persist(); renderTimer();
-});
-$("resetBtn").addEventListener("click", () => {
-  if (R.phase === "done") { R = { phase: "idle" }; persist(); renderTimer(); return; }
-  if (!resetArmed) { resetArmed = setTimeout(() => { resetArmed = null; renderTimer(); }, 3000); renderTimer(); return; }
-  clearTimeout(resetArmed); resetArmed = null; R = { phase: "idle" }; persist(); renderTimer();
-});
-document.querySelectorAll(".stepper button").forEach(b => b.addEventListener("click", () => {
-  if (active()) return;
-  const k = b.dataset.k;
-  S[k] = Math.min(LIM[k][1], Math.max(LIM[k][0], S[k] + Number(b.dataset.d)));
-  save("sl-settings", S); renderTimer();
-}));
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { tick(); refresh(); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
 try {
   const w = new Worker(URL.createObjectURL(new Blob(["setInterval(()=>postMessage(0),500)"], { type: "text/javascript" })));
-  w.onmessage = tick;
-} catch { setInterval(tick, 500); }
-if (SERVER) setInterval(refresh, 120000);
+  w.onmessage = renderWatch;
+} catch { setInterval(renderWatch, 500); }
+if (SERVER) setInterval(refresh, 60000);
 
 renderNotify();
 renderAll();
