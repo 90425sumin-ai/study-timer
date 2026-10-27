@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>공부 쉼표 타이머</title>
+<meta name="description" content="공부 시간과 쉬는 시간을 정해 두면, 바뀔 때마다 소리와 알림으로 알려 주는 타이머">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 큰 시계 카드 하나가 주인공, 아래로 시간 정하기 → 오늘 일정표 → 사용법 순서 */
+:root {
+  --bg: #f3f5fa;
+  --surface: #ffffff;
+  --ink: #1b2236;
+  --ink-soft: #5b6480;
+  --line: #dfe3ee;
+  --study: #3346a8;
+  --study-soft: #e6e9f8;
+  --rest: #17896a;
+  --rest-soft: #dff3ec;
+  --warn: #c2410c;
+  --f-display: "Do Hyeon", "Malgun Gothic", sans-serif;
+  --f-body: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #10131c; --surface: #181c28; --ink: #e8ebf4; --ink-soft: #9aa3bd; --line: #2a3043;
+    --study: #8f9ef0; --study-soft: #232a4a; --rest: #5ccfa8; --rest-soft: #16352c; --warn: #fb923c;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 16px; line-height: 1.6; word-break: keep-all;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+button, input { font: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--study); outline-offset: 2px; }
+
+.wrap {
+  max-width: 760px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+  display: grid; gap: 20px;
+}
+header { display: grid; gap: 4px; }
+header h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(30px, 6vw, 40px); }
+header p { color: var(--ink-soft); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px; display: grid; gap: 16px; }
+.card h2 { font-size: 18px; font-weight: 700; }
+
+/* Timer */
+.timer { --tone: var(--study); --tone-soft: var(--study-soft); text-align: center; justify-items: center; padding-block: 28px; }
+.timer.rest { --tone: var(--rest); --tone-soft: var(--rest-soft); }
+.pill { display: inline-flex; gap: 8px; align-items: center; background: var(--tone-soft); color: var(--tone); font-weight: 700; padding: 6px 16px; border-radius: 999px; font-size: 16px; }
+.pill i { width: 9px; height: 9px; border-radius: 50%; background: var(--tone); }
+.timer.idle .pill, .timer.done .pill { background: var(--bg); color: var(--ink-soft); }
+.timer.idle .pill i, .timer.done .pill i { background: var(--ink-soft); }
+.clock { font-family: var(--f-display); font-size: clamp(72px, 22vw, 128px); line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+.round { color: var(--ink-soft); font-size: 15px; }
+.bar { width: 100%; height: 10px; border-radius: 999px; background: var(--bg); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--tone); border-radius: inherit; transition: width .5s linear; }
+.next { font-size: 14px; color: var(--ink-soft); }
+.controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+.btn { border: 0; border-radius: 12px; padding: 14px 26px; font-size: 18px; font-weight: 700; cursor: pointer; background: var(--tone); color: var(--surface); min-width: 160px; }
+.btn.ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); font-size: 15px; font-weight: 500; min-width: 0; padding: 12px 18px; }
+.btn.ghost.armed { color: var(--warn); border-color: var(--warn); }
+
+.banner { width: 100%; border-radius: 12px; padding: 12px 16px; background: var(--tone-soft); color: var(--tone); font-weight: 700; }
+
+/* Settings */
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 18px; }
+.field { display: grid; gap: 8px; align-content: start; }
+.field label { font-weight: 700; font-size: 15px; }
+.stepper { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.stepper button { border: 0; background: var(--bg); color: var(--ink); font-size: 22px; cursor: pointer; }
+.stepper button:disabled { opacity: .4; cursor: not-allowed; }
+.stepper .val { display: flex; align-items: baseline; justify-content: center; gap: 4px; padding: 8px 0; }
+.stepper input { width: 3.2em; border: 0; background: transparent; color: var(--ink); text-align: right; font-family: var(--f-display); font-size: 30px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper input:disabled { color: var(--ink-soft); }
+.stepper .unit { color: var(--ink-soft); font-size: 15px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: transparent; color: var(--ink-soft); border-radius: 999px; padding: 4px 12px; font-size: 14px; cursor: pointer; }
+.chip:disabled { opacity: .4; cursor: not-allowed; }
+.lock-note { font-size: 14px; color: var(--ink-soft); }
+
+.toggles { display: grid; gap: 10px; border-top: 1px dashed var(--line); padding-top: 16px; }
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toggle span small { display: block; color: var(--ink-soft); font-size: 13px; }
+.switch { position: relative; width: 50px; height: 30px; flex: none; }
+.switch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; margin: 0; }
+.switch b { position: absolute; inset: 0; background: var(--line); border-radius: 999px; transition: background .2s; pointer-events: none; }
+.switch b::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); transition: transform .2s; }
+.switch input:checked + b { background: var(--study); }
+.switch input:checked + b::after { transform: translateX(20px); }
+.switch input:focus-visible + b { outline: 3px solid var(--study); outline-offset: 2px; }
+
+.notify { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; background: var(--bg); border-radius: 12px; padding: 12px 14px; }
+.notify p { font-size: 14px; color: var(--ink-soft); flex: 1 1 220px; }
+.notify p b { color: var(--ink); }
+.notify .btn { min-width: 0; font-size: 15px; padding: 10px 16px; background: var(--study); }
+
+/* Schedule */
+.plan { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.plan li { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--bg); font-size: 15px; }
+.plan .kind { font-weight: 700; }
+.plan .study .kind { color: var(--study); }
+.plan .rest .kind { color: var(--rest); }
+.plan .time { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.plan .len { font-size: 13px; color: var(--ink-soft); }
+.plan li.now { outline: 2px solid var(--study); }
+.plan li.now.rest { outline-color: var(--rest); }
+.plan li.past { opacity: .5; }
+.plan-end { font-size: 14px; color: var(--ink-soft); }
+
+.howto ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-soft); }
+.howto ol b { color: var(--ink); }
+footer { font-size: 13px; color: var(--ink-soft); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) { .bar i, .switch b, .switch b::after { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>공부 쉼표 타이머</h1>
+    <p>공부할 시간과 쉴 시간을 정하면, 바뀔 때마다 소리와 알림으로 알려 줘요.</p>
+  </header>
+
+  <section class="card timer idle" id="timerCard" aria-label="타이머">
+    <span class="pill"><i></i><span id="phaseLabel">준비</span></span>
+    <div class="clock" id="clock" role="timer">50:00</div>
+    <p class="round" id="roundLabel">총 4회 · 공부 50분, 쉬기 10분</p>
+    <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+    <p class="next" id="nextLabel">시작을 누르면 공부가 시작돼요</p>
+    <div class="banner" id="banner" hidden></div>
+    <div class="controls">
+      <button class="btn" type="button" id="mainBtn">공부 시작</button>
+      <button class="btn ghost" type="button" id="skipBtn" hidden>다음으로 넘기기</button>
+      <button class="btn ghost" type="button" id="resetBtn" hidden>처음으로</button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="setTitle">
+    <h2 id="setTitle">시간 정하기</h2>
+    <div class="fields">
+      <div class="field">
+        <label for="studyMin">공부 시간</label>
+        <div class="stepper">
+          <button type="button" data-step="study" data-d="-5" aria-label="공부 시간 5분 줄이기">−</button>
+          <span class="val"><input type="number" id="studyMin" min="1" max="180" inputmode="numeric"><span class="unit">분</span></span>
+          <button type="button" data-step="study" data-d="5" aria-label="공부 시간 5분 늘리기">+</button>
+        </div>
+        <div class="presets">
+          <button class="chip" type="button" data-set="study" data-v="25">25분</button>
+          <button class="chip" type="button" data-set="study" data-v="45">45분</button>
+          <button class="chip" type="button" data-set="study" data-v="50">50분</button>
+          <button class="chip" type="button" data-set="study" data-v="90">90분</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="restMin">쉬는 시간</label>
+        <div class="stepper">
+          <button type="button" data-step="rest" data-d="-1" aria-label="쉬는 시간 1분 줄이기">−</button>
+          <span class="val"><input type="number" id="restMin" min="1" max="60" inputmode="numeric"><span class="unit">분</span></span>
+          <button type="button" data-step="rest" data-d="1" aria-label="쉬는 시간 1분 늘리기">+</button>
+        </div>
+        <div class="presets">
+          <button class="chip" type="button" data-set="rest" data-v="5">5분</button>
+          <button class="chip" type="button" data-set="rest" data-v="10">10분</button>
+          <button class="chip" type="button" data-set="rest" data-v="15">15분</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="roundsNum">반복 횟수</label>
+        <div class="stepper">
+          <button type="button" data-step="rounds" data-d="-1" aria-label="반복 횟수 줄이기">−</button>
+          <span class="val"><input type="number" id="roundsNum" min="1" max="12" inputmode="numeric"><span class="unit">회</span></span>
+          <button type="button" data-step="rounds" data-d="1" aria-label="반복 횟수 늘리기">+</button>
+        </div>
+        <div class="presets">
+          <button class="chip" type="button" data-set="rounds" data-v="2">2회</button>
+          <button class="chip" type="button" data-set="rounds" data-v="4">4회</button>
+          <button class="chip" type="button" data-set="rounds" data-v="6">6회</button>
+        </div>
+      </div>
+    </div>
+    <p class="lock-note" id="lockNote" hidden>타이머가 돌아가는 동안에는 시간을 바꿀 수 없어요. 바꾸려면 "처음으로"를 눌러 주세요.</p>
+
+    <div class="toggles">
+      <div class="toggle">
+        <span>끝나기 1분 전 미리 알림<small>공부나 쉬는 시간이 1분 남으면 한 번 더 알려 줘요</small></span>
+        <label class="switch"><input type="checkbox" id="optPre" aria-label="끝나기 1분 전 미리 알림"><b></b></label>
+      </div>
+      <div class="toggle">
+        <span>알림 소리<small>시간이 바뀔 때 딩동 소리가 나요</small></span>
+        <label class="switch"><input type="checkbox" id="optSound" aria-label="알림 소리"><b></b></label>
+      </div>
+      <div class="toggle">
+        <span>화면 꺼짐 막기<small>타이머가 도는 동안 휴대폰 화면이 꺼지지 않게 해요</small></span>
+        <label class="switch"><input type="checkbox" id="optAwake" aria-label="화면 꺼짐 막기"><b></b></label>
+      </div>
+    </div>
+
+    <div class="notify">
+      <p id="notifyText"><b>알림 허용이 필요해요.</b> 다른 창을 보고 있을 때도 알림을 받으려면 허용해 주세요.</p>
+      <button class="btn" type="button" id="notifyBtn">알림 허용하기</button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="planTitle">
+    <h2 id="planTitle">오늘 일정</h2>
+    <ol class="plan" id="plan"></ol>
+    <p class="plan-end" id="planEnd"></p>
+  </section>
+
+  <section class="card howto" aria-labelledby="howTitle">
+    <h2 id="howTitle">이렇게 쓰세요</h2>
+    <ol>
+      <li><b>시간 정하기</b>에서 공부 시간, 쉬는 시간, 반복 횟수를 고르세요.</li>
+      <li><b>알림 허용하기</b>를 누르고, 브라우저가 물어보면 "허용"을 누르세요.</li>
+      <li><b>공부 시작</b>을 누르면 정해 둔 시간마다 소리와 알림이 와요.</li>
+      <li>이 창은 닫지 말고 열어 두세요. 다른 탭이나 프로그램을 써도 괜찮아요.</li>
+    </ol>
+  </section>
+
+  <footer>설정은 이 기기에 저장돼서 다음에 열어도 그대로예요.</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+const LIMITS = { study: [1, 180], rest: [1, 60], rounds: [1, 12] };
+const S = Object.assign({ study: 50, rest: 10, rounds: 4, pre: true, sound: true, awake: true }, load("st-settings") || {});
+let R = load("st-run") || { phase: "idle" };   // phase: idle | study | rest | done
+let audio = null, wakeLock = null, resetArmed = null;
+
+const clamp = (k, v) => Math.min(LIMITS[k][1], Math.max(LIMITS[k][0], Math.round(Number(v) || LIMITS[k][0])));
+const active = () => R.phase === "study" || R.phase === "rest";
+const phaseLen = p => (p === "study" ? S.study : S.rest) * 60;
+const leftSec = () => !active() ? S.study * 60 : R.running ? Math.max(0, Math.ceil((R.endAt - Date.now()) / 1000)) : R.left;
+const clockStr = t => new Date(t).toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+const persist = () => save("st-run", R);
+
+// ---- 알림 ----
+const swReady = ("serviceWorker" in navigator && location.protocol.startsWith("http"))
+  ? navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready).catch(() => null)
+  : Promise.resolve(null);
+
+function chime(kind) {
+  if (!S.sound || !audio) return;
+  try {
+    const notes = kind === "rest" ? [784, 659, 523] : kind === "pre" ? [660] : kind === "done" ? [523, 659, 784, 1047] : [523, 659, 784];
+    notes.forEach((f, i) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = "sine"; o.frequency.value = f; o.connect(g); g.connect(audio.destination);
+      const t = audio.currentTime + i * 0.25;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.35, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+      o.start(t); o.stop(t + 0.75);
+    });
+  } catch {}
+}
+
+async function notify(title, body, kind) {
+  chime(kind);
+  if (navigator.vibrate) { try { navigator.vibrate(kind === "pre" ? 200 : [300, 150, 300]); } catch {} }
+  const b = $("banner"); b.textContent = `${title} · ${body}`; b.hidden = false;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const opts = { body, tag: "study-timer", renotify: true, requireInteraction: kind !== "pre" };
+  try {
+    const reg = await swReady;
+    if (reg) return reg.showNotification(title, opts);
+    new Notification(title, opts);
+  } catch {}
+}
+
+function renderNotify() {
+  const t = $("notifyText"), btn = $("notifyBtn");
+  if (!("Notification" in window)) {
+    t.innerHTML = "<b>이 브라우저는 알림을 지원하지 않아요.</b> 소리와 화면 안내로 알려 드릴게요.";
+    btn.hidden = true; return;
+  }
+  const p = Notification.permission;
+  btn.hidden = p !== "default";
+  t.innerHTML = p === "granted" ? "<b>알림이 켜져 있어요.</b> 다른 창을 보고 있어도 시간이 바뀌면 알려 드려요."
+    : p === "denied" ? "<b>알림이 차단되어 있어요.</b> 주소창 왼쪽의 자물쇠(또는 설정) 아이콘을 눌러 알림을 \"허용\"으로 바꾼 뒤 새로고침해 주세요."
+    : "<b>알림 허용이 필요해요.</b> 다른 창을 보고 있을 때도 알림을 받으려면 허용해 주세요.";
+}
+async function askNotify() {
+  if (!("Notification" in window) || Notification.permission !== "default") return;
+  try { await Notification.requestPermission(); } catch {}
+  renderNotify();
+}
+$("notifyBtn").addEventListener("click", askNotify);
+
+// ---- 화면 꺼짐 막기 ----
+async function keepAwake() {
+  if (!S.awake || !R.running || !("wakeLock" in navigator) || document.hidden) return;
+  try { if (!wakeLock) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); } } catch {}
+}
+function releaseAwake() { if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; } }
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { keepAwake(); tick(); } });
+
+// ---- 타이머 흐름 ----
+function advance(at, quiet) {
+  if (R.phase === "study") {
+    if (R.round >= S.rounds) {
+      R = { phase: "done", round: R.round };
+      if (!quiet) notify("오늘 공부 끝!", `${S.rounds}회를 모두 마쳤어요. 수고했어요.`, "done");
+      releaseAwake();
+    } else {
+      R = { ...R, phase: "rest", endAt: at + S.rest * 60000, pre: false };
+      if (!quiet) notify("쉬는 시간이에요", `${R.round}회차 공부 완료! ${S.rest}분 동안 쉬어요.`, "rest");
+    }
+  } else if (R.phase === "rest") {
+    R = { ...R, phase: "study", round: R.round + 1, endAt: at + S.study * 60000, pre: false };
+    if (!quiet) notify("다시 공부할 시간이에요", `${R.round}회차 공부 ${S.study}분을 시작해요.`, "study");
+  }
+  persist();
+}
+
+function tick() {
+  if (active() && R.running) {
+    while (active() && R.running && Date.now() >= R.endAt) advance(R.endAt, Date.now() - R.endAt > 90000);
+    if (active() && R.running && S.pre && !R.pre) {
+      const left = leftSec();
+      if (left <= 60 && phaseLen(R.phase) > 120) {
+        R.pre = true; persist();
+        notify(R.phase === "study" ? "1분 뒤 쉬는 시간" : "1분 뒤 다시 공부", R.phase === "study" ? "마무리할 준비를 해요." : "자리로 돌아올 준비를 해요.", "pre");
+      }
+    }
+  }
+  render();
+}
+
+function render() {
+  const card = $("timerCard");
+  card.className = "card timer " + R.phase;
+  const left = leftSec();
+  const mm = String(Math.floor(left / 60)).padStart(2, "0"), ss = String(left % 60).padStart(2, "0");
+  $("clock").textContent = R.phase === "done" ? "끝!" : `${mm}:${ss}`;
+  $("phaseLabel").textContent = { idle: "준비", study: "공부 중", rest: "쉬는 중", done: "모두 완료" }[R.phase] + (active() && !R.running ? " (멈춤)" : "");
+  $("roundLabel").textContent = active() || R.phase === "done"
+    ? `${R.round} / ${S.rounds}회차 · 공부 ${S.study}분, 쉬기 ${S.rest}분`
+    : `총 ${S.rounds}회 · 공부 ${S.study}분, 쉬기 ${S.rest}분`;
+  $("barFill").style.width = active() ? (100 * (1 - left / phaseLen(R.phase))) + "%" : R.phase === "done" ? "100%" : "0%";
+
+  let next = "시작을 누르면 공부가 시작돼요";
+  if (active() && R.running) {
+    const at = clockStr(R.endAt);
+    next = R.phase === "study"
+      ? (R.round >= S.rounds ? `${at}에 오늘 공부가 끝나요` : `${at}에 쉬는 시간 알림이 와요`)
+      : `${at}에 다시 공부 알림이 와요`;
+  } else if (active()) next = "멈춰 있어요. 계속하기를 누르면 이어서 해요";
+  else if (R.phase === "done") next = "다시 하려면 \"공부 시작\"을 누르세요";
+  $("nextLabel").textContent = next;
+
+  $("mainBtn").textContent = !active() ? "공부 시작" : R.running ? "잠깐 멈춤" : "계속하기";
+  $("skipBtn").hidden = !active();
+  $("resetBtn").hidden = R.phase === "idle";
+  $("resetBtn").textContent = resetArmed ? "정말 처음으로?" : "처음으로";
+  $("resetBtn").classList.toggle("armed", !!resetArmed);
+  if (!active()) $("banner").hidden = true;
+
+  const locked = active();
+  document.querySelectorAll(".stepper button, .chip, .stepper input").forEach(el => { el.disabled = locked; });
+  $("lockNote").hidden = !locked;
+  if (document.activeElement !== $("studyMin")) $("studyMin").value = S.study;
+  if (document.activeElement !== $("restMin")) $("restMin").value = S.rest;
+  if (document.activeElement !== $("roundsNum")) $("roundsNum").value = S.rounds;
+
+  document.title = active() && R.running ? `${mm}:${ss} ${R.phase === "study" ? "공부 중" : "쉬는 중"} · 공부 쉼표 타이머` : "공부 쉼표 타이머";
+  renderPlan();
+}
+
+function renderPlan() {
+  const items = [];
+  let t, startIdx = 0;
+  if (active()) {
+    // 현재 구간의 시작 시각을 거꾸로 계산
+    const curEnd = R.running ? R.endAt : Date.now() + R.left * 1000;
+    t = curEnd - phaseLen(R.phase) * 1000;
+    for (let r = 1; r < R.round; r++) t -= (S.study + S.rest) * 60000;
+    if (R.phase === "rest") t -= S.study * 60000;
+  } else t = Date.now();
+  for (let r = 1; r <= S.rounds; r++) {
+    items.push({ kind: "study", r, start: t, end: t + S.study * 60000 }); t += S.study * 60000;
+    if (r < S.rounds) { items.push({ kind: "rest", r, start: t, end: t + S.rest * 60000 }); t += S.rest * 60000; }
+  }
+  const curIdx = active() ? (R.round - 1) * 2 + (R.phase === "rest" ? 1 : 0) : -1;
+  $("plan").innerHTML = items.map((it, i) => {
+    const cls = [it.kind, i === curIdx ? "now" : "", (curIdx > i || R.phase === "done") ? "past" : ""].join(" ");
+    const label = it.kind === "study" ? `공부 ${it.r}` : "쉬기";
+    const len = it.kind === "study" ? S.study : S.rest;
+    return `<li class="${cls}"><span class="kind">${label}</span><span class="time">${clockStr(it.start)} ~ ${clockStr(it.end)}</span><span class="len">${len}분</span></li>`;
+  }).join("");
+  const totalStudy = S.study * S.rounds;
+  const h = Math.floor(totalStudy / 60), m = totalStudy % 60;
+  $("planEnd").textContent = `총 공부 ${h ? h + "시간 " : ""}${m ? m + "분" : ""}`.trim() + (active() ? (R.running ? "" : " · 멈춘 동안은 일정이 뒤로 밀려요") : " · 지금 시작하면 이렇게 진행돼요");
+}
+
+// ---- 버튼 ----
+$("mainBtn").addEventListener("click", () => {
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch {}
+  askNotify();
+  if (!active()) {
+    R = { phase: "study", round: 1, running: true, endAt: Date.now() + S.study * 60000, pre: false };
+    $("banner").hidden = true;
+    chime("study");
+  } else if (R.running) {
+    R.left = leftSec(); R.running = false; releaseAwake();
+  } else {
+    R.running = true; R.endAt = Date.now() + R.left * 1000;
+  }
+  persist(); keepAwake(); render();
+});
+$("skipBtn").addEventListener("click", () => {
+  if (!active()) return;
+  const wasRunning = R.running;
+  advance(Date.now(), false);
+  if (active()) { R.running = wasRunning || R.running; if (!R.running) R.left = phaseLen(R.phase); persist(); }
+  render();
+});
+$("resetBtn").addEventListener("click", () => {
+  if (R.phase === "done") { R = { phase: "idle" }; persist(); render(); return; }
+  if (!resetArmed) { resetArmed = setTimeout(() => { resetArmed = null; render(); }, 3000); render(); return; }
+  clearTimeout(resetArmed); resetArmed = null;
+  R = { phase: "idle" }; persist(); releaseAwake(); render();
+});
+
+// ---- 설정 ----
+function setVal(k, v) { if (active()) return; S[k] = clamp(k, v); save("st-settings", S); render(); }
+document.querySelectorAll("[data-step]").forEach(b => b.addEventListener("click", () => {
+  const k = b.dataset.step, d = Number(b.dataset.d);
+  let v = S[k] + d;
+  if (k === "study" && Math.abs(d) === 5 && S[k] % 5) v = d > 0 ? Math.ceil(S[k] / 5) * 5 : Math.floor(S[k] / 5) * 5;
+  setVal(k, v);
+}));
+document.querySelectorAll("[data-set]").forEach(b => b.addEventListener("click", () => setVal(b.dataset.set, b.dataset.v)));
+[["studyMin", "study"], ["restMin", "rest"], ["roundsNum", "rounds"]].forEach(([id, k]) => {
+  $(id).addEventListener("change", e => setVal(k, e.target.value));
+  $(id).addEventListener("blur", render);
+});
+[["optPre", "pre"], ["optSound", "sound"], ["optAwake", "awake"]].forEach(([id, k]) => {
+  $(id).checked = !!S[k];
+  $(id).addEventListener("change", e => {
+    S[k] = e.target.checked; save("st-settings", S);
+    if (k === "awake") { if (S.awake) keepAwake(); else releaseAwake(); }
+  });
+});
+
+// ---- 시계: 백그라운드 탭에서도 덜 늦어지도록 워커로 똑딱 ----
+try {
+  const w = new Worker(URL.createObjectURL(new Blob(["setInterval(()=>postMessage(0),500)"], { type: "text/javascript" })));
+  w.onmessage = tick;
+} catch { setInterval(tick, 500); }
+
+renderNotify();
+tick();
+</script>
+</body>
+</html>
