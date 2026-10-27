@@ -249,7 +249,7 @@ footer { text-align: center; font-family: var(--f-stencil); font-size: 11px; let
       <div class="banner" id="banner" hidden></div>
       <button class="btn" type="button" id="mainBtn">작전 개시</button>
       <div class="notify-row"><span id="notifyText"></span><button type="button" id="notifyBtn" hidden>무전(알림) 허용하기</button></div>
-      <p class="muted">한 번에 최대 3시간까지 기록돼요. 다른 기기에서 열어도 같은 스톱워치가 이어져요.</p>
+      <p class="muted" id="watchNote">한 번에 최대 3시간까지 기록돼요.</p>
     </section>
 
     <section class="plate" id="myCard" aria-labelledby="myTitle">
@@ -457,6 +457,7 @@ function renderAll() {
   $("myTitleText").textContent = SERVER ? "오늘 내 전과" : "작전 브리핑";
   $("boardCard").hidden = !SERVER;
   $("rulesCard").hidden = !SERVER;
+  $("watchNote").textContent = SERVER ? "한 번에 최대 3시간까지 기록돼요. 다른 기기에서 열어도 같은 스톱워치가 이어져요." : "한 번에 최대 3시간까지 기록돼요. 창을 닫아도 스톱워치는 이 기기에서 계속 돌아가요.";
   renderMy(my); renderBoard(my); renderCard(my); renderFreeze(my); renderWatch();
 }
 const RULES = { School: 30, Grade: 20, Class: 5 };
