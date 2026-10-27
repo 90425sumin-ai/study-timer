@@ -184,6 +184,33 @@ header p { color: var(--sand-soft); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: 13px; padding: 3px 10px; background: var(--black); border: 1px solid var(--line); }
 
+/* 보급창 (상점) */
+.px-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+.px-head b { font-family: var(--f-stencil); font-weight: 400; color: var(--brass); font-size: 26px; font-variant-numeric: tabular-nums; }
+.shelf { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 720px) { .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.item { background: var(--black); border: 1px solid var(--line); padding: 14px; display: grid; gap: 8px; align-content: start; }
+.item.mystery { border-color: var(--brass); background: linear-gradient(160deg, var(--brass-soft), var(--black) 70%); }
+.item .ico { font-size: 28px; line-height: 1; }
+.item b { font-family: var(--f-display); font-size: 17px; font-weight: 400; }
+.item .cost { font-family: var(--f-stencil); color: var(--brass); font-size: 20px; }
+.item small { font-size: 12px; color: var(--sand-soft); }
+.item .btn { font-size: 15px; padding: 9px 12px; }
+.item .btn.armed { background: var(--attack); }
+.orders { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.orders > li { background: var(--black); border-left: 3px solid var(--line); padding: 10px 12px; display: grid; gap: 10px; }
+.orders > li.ready { border-left-color: var(--brass); }
+.order-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; font-size: 14px; }
+.order-row .st { font-size: 12px; padding: 1px 8px; border: 1px solid var(--line); color: var(--sand-soft); }
+.order-row .st.wait { border-color: var(--brass); color: var(--brass); }
+.order-row .st.go { border-color: var(--attack); color: var(--attack); }
+.mdeck { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; max-width: 440px; }
+.mcard { aspect-ratio: 3 / 4; max-width: 100%; border: 2px solid var(--brass); background: var(--brass-soft); color: var(--brass); font-family: var(--f-stencil); font-size: 18px; cursor: pointer; display: grid; place-items: center; padding: 2px; }
+.mcard:disabled { cursor: default; }
+.mcard.lose { background: var(--plate); border-color: var(--line); color: var(--sand-soft); font-family: var(--f-display); font-size: 13px; }
+.mcard.meal { background: var(--olive); border-color: var(--olive); color: var(--black); font-family: var(--f-display); font-size: 12px; }
+.mcard.hold { background: var(--attack); border-color: var(--attack); color: var(--black); font-family: var(--f-display); font-size: 12px; }
+.mcard.picked { outline: 3px solid var(--sand); outline-offset: 2px; }
 .rules ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--sand-soft); }
 .rules b { color: var(--sand); }
 .pt-table { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -255,7 +282,7 @@ footer { text-align: center; font-family: var(--f-stencil); font-size: 11px; let
     <section class="plate" id="myCard" aria-labelledby="myTitle">
       <h2 id="myTitle"><span class="code">REPORT</span><span id="myTitleText">오늘 내 전과</span></h2>
       <div id="rankArea" style="display:grid;gap:12px">
-        <div class="points" aria-label="누적 포인트"><b id="ptTotal">0</b><span class="unit">P</span><small id="ptNote">누적 포인트</small></div>
+        <div class="points" aria-label="보유 포인트"><b id="ptTotal">0</b><span class="unit">P</span><small id="ptNote">보유 포인트</small></div>
         <p class="muted" id="rankBasis">전과를 불러오는 중이에요.</p>
         <div class="ranks">
           <div class="rank-tile" id="tileSchool"><span>전군 (학교)</span><b id="rSchool">-</b><small id="pSchool"></small></div>
@@ -301,6 +328,19 @@ footer { text-align: center; font-family: var(--f-stencil); font-size: 11px; let
     <div class="chips" id="fzList"></div>
   </section>
 
+  <section class="plate" id="shopCard" hidden aria-labelledby="shopTitle">
+    <div class="px-head">
+      <h2 id="shopTitle"><span class="code">PX</span>보급창</h2>
+      <span class="muted">보유 <b id="pxBalance">0</b> P</span>
+    </div>
+    <p class="muted" id="pxHint">포인트로 물품을 살 수 있어요. 산 물품의 포인트만큼 깎여요.</p>
+    <div class="shelf" id="shelf"></div>
+    <p class="muted" id="pxMsg" aria-live="polite"></p>
+    <h3 style="font-family:var(--f-display);font-size:16px">내 보급 내역</h3>
+    <ul class="orders" id="orders"></ul>
+    <p class="muted" id="ordersEmpty">아직 산 물품이 없어요.</p>
+  </section>
+
   <section class="plate" id="boardCard" aria-labelledby="boardTitle">
     <h2 id="boardTitle"><span class="code">LEADERBOARD</span>오늘의 전과 순위</h2>
     <div class="tabs" role="group" aria-label="순위 범위">
@@ -320,8 +360,10 @@ footer { text-align: center; font-family: var(--f-stencil); font-size: 11px; let
       <div><span>소대 (반)</span><b>5등 안</b><em>+2P</em></div>
     </div>
     <ul>
-      <li><b>전과는 매일 밤 12시에 0으로 돌아가요.</b> 순위는 오늘 공부한 시간으로 매기고, 스톱워치가 도는 동안에도 실시간으로 바뀌어요.</li>
-      <li><b>포인트는 밤 12시의 최종 순위로 쌓여요.</b> 세 범위를 따로 계산해서, 모두 들면 하루에 18P를 받아요. 같은 시간이면 같은 등수예요.</li>
+      <li><b>전과(공부 시간)는 매일 밤 12시에 0으로 돌아가요.</b> 순위는 오늘 공부한 시간으로 매기고, 스톱워치가 도는 동안에도 실시간으로 바뀌어요.</li>
+      <li><b>포인트는 밤 12시의 최종 순위로 쌓이고 사라지지 않아요.</b> 세 범위를 따로 계산해서, 모두 들면 하루에 18P를 받아요. 같은 시간이면 같은 등수예요.</li>
+      <li><b>보급창:</b> 소정의 간식 44P · 지우개 60P · 볼펜 80P · 미스터리 박스 100P. 사면 그만큼 포인트가 깎여요. 물품은 선생님께 받아 가세요.</li>
+      <li><b>미스터리 박스:</b> 카드 10장 중 1장을 골라요. 꽝 4장, 우선급식증 4장, 기습권 2장이에요. 기습권은 원하는 친구 4명의 공부 시간을 각각 5시간 동안 멈춰요.</li>
       <li><b>보급은 4일에 한 번이에요.</b> 4일째 되는 날 밤 12시의 전군(학교) 최종 순위로 다음 4일 동안의 보급이 정해져요.</li>
       <li><b>상위 20% · 보급 20분:</b> 보급을 받은 첫날 전과에 20분이 더해져요. 공부하지 않아도 들어가요.</li>
       <li><b>상위 10% · 기습:</b> 다음 4일 동안 다른 병사 5명까지 고를 수 있어요. 고른 날 그 병사가 공부한 시간은 순위에 들어가지 않아요. 누가 골랐는지는 교관(선생님)만 볼 수 있어요.</li>
@@ -457,6 +499,8 @@ function renderAll() {
   $("myTitleText").textContent = SERVER ? "오늘 내 전과" : "작전 브리핑";
   $("boardCard").hidden = !SERVER;
   $("rulesCard").hidden = !SERVER;
+  $("shopCard").hidden = !my;
+  renderShop(my);
   $("watchNote").textContent = SERVER ? "한 번에 최대 3시간까지 기록돼요. 다른 기기에서 열어도 같은 스톱워치가 이어져요." : "한 번에 최대 3시간까지 기록돼요. 창을 닫아도 스톱워치는 이 기기에서 계속 돌아가요.";
   renderMy(my); renderBoard(my); renderCard(my); renderFreeze(my); renderWatch();
 }
@@ -479,12 +523,14 @@ function renderMy(my) {
     $("p" + k).textContent = r ? `${r.of}명 중 · ${RULES[k]}등 안이면 포인트` : `아직 기록 없음 · ${RULES[k]}등 안이면 포인트`;
     $("tile" + k).classList.toggle("hit", !!r && r.rank <= RULES[k]);
   });
-  $("ptTotal").textContent = my.points;
-  $("ptNote").textContent = my.pointsYesterday ? `누적 포인트 · 어제 +${my.pointsYesterday}P` : "누적 포인트";
+  $("ptTotal").textContent = my.balance;
+  $("ptNote").textContent = `보유 포인트 · 지금까지 번 포인트 ${my.points}P` + (my.pointsYesterday ? ` · 어제 +${my.pointsYesterday}P` : "");
   $("ptIfNow").textContent = `+${my.pointsIfNow}P`;
   $("t20").classList.toggle("on", my.tiers.t20); $("t10").classList.toggle("on", my.tiers.t10); $("t3").classList.toggle("on", my.tiers.t3);
-  $("myFrozen").hidden = !my.frozenToday;
-  $("myFrozen").textContent = "오늘은 기습을 당해 공부한 시간이 순위에 들어가지 않아요.";
+  const held = my.heldUntil && my.heldUntil > now();
+  $("myFrozen").hidden = !my.frozenToday && !held;
+  $("myFrozen").textContent = my.frozenToday ? "오늘은 기습을 당해 공부한 시간이 순위에 들어가지 않아요."
+    : held ? `기습권에 맞아 ${clockStr(my.heldUntil)}까지 공부한 시간이 기록되지 않아요.` : "";
 }
 function renderBoard(my) {
   if (!SERVER) return;
@@ -582,6 +628,136 @@ $("fzBtn").addEventListener("click", async () => {
   } catch { $("fzMsg").textContent = "서버에 연결하지 못했어요."; }
   await refresh();
 });
+
+// ---------- 보급창 (상점) ----------
+const clockStr = t => new Date(t).toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+const ICON = { snack: "🍫", eraser: "🧽", pen: "🖊️", mystery: "🎁" };
+const CARD_NAME = { l: "꽝", m: "우선급식증", h: "기습권" };
+const CARD_CLASS = { l: "lose", m: "meal", h: "hold" };
+let buyArmed = null, shopBusy = false;
+function shopMsg(t) { $("pxMsg").textContent = t || ""; }
+function renderShop(my) {
+  if (!my || !ST) return;
+  $("pxBalance").textContent = my.balance;
+  const items = ST.items || [];
+  const cheapest = Math.min(...items.map(i => i.cost));
+  $("pxHint").textContent = my.balance >= cheapest ? "포인트로 물품을 살 수 있어요. 산 물품의 포인트만큼 깎여요." : `${cheapest - my.balance}P 더 모으면 보급창을 쓸 수 있어요.`;
+  const shelf = $("shelf"); shelf.innerHTML = "";
+  items.forEach(it => {
+    const d = document.createElement("div"); d.className = "item" + (it.id === "mystery" ? " mystery" : "");
+    const ico = document.createElement("span"); ico.className = "ico"; ico.textContent = ICON[it.id] || "📦";
+    const name = document.createElement("b"); name.textContent = it.name;
+    const cost = document.createElement("span"); cost.className = "cost"; cost.textContent = `${it.cost}P`;
+    const note = document.createElement("small");
+    note.textContent = it.id === "mystery" ? "꽝 4 · 우선급식증 4 · 기습권 2" : my.balance >= it.cost ? "살 수 있어요" : `${it.cost - my.balance}P 부족`;
+    const btn = document.createElement("button"); btn.type = "button"; btn.className = "btn"; btn.id = "buy-" + it.id;
+    const armed = buyArmed && buyArmed.item === it.id;
+    btn.textContent = armed ? "정말 살까요?" : "사기";
+    btn.classList.toggle("armed", !!armed);
+    btn.disabled = my.balance < it.cost || shopBusy;
+    btn.addEventListener("click", () => buy(it));
+    d.append(ico, name, cost, note, btn); shelf.appendChild(d);
+  });
+  const ol = $("orders"); ol.innerHTML = "";
+  $("ordersEmpty").hidden = my.orders.length > 0;
+  my.orders.forEach(o => {
+    const li = document.createElement("li");
+    const row = document.createElement("div"); row.className = "order-row";
+    const left = document.createElement("span");
+    let title = `${ICON[o.item] || "📦"} ${o.name} · -${o.cost}P`;
+    if (o.result) title += ` → ${CARD_NAME[o.result[0]] || o.result}`;
+    left.textContent = title;
+    const st = document.createElement("span"); st.className = "st"; st.textContent = o.status;
+    if (o.status === "지급 대기") st.classList.add("wait");
+    if (o.status === "미개봉" || o.status === "사용 가능") { st.classList.add("go"); li.className = "ready"; }
+    row.append(left, st); li.appendChild(row);
+    if (o.item === "mystery") li.appendChild(mysteryDeck(o));
+    if (o.result === "hold") li.appendChild(holdPicker(o, my));
+    if (o.status === "지급 대기") { const p = document.createElement("p"); p.className = "muted"; p.textContent = "이 화면을 선생님께 보여 주고 물품을 받아 가세요."; li.appendChild(p); }
+    ol.appendChild(li);
+  });
+}
+async function buy(it) {
+  if (shopBusy) return;
+  if (!buyArmed || buyArmed.item !== it.id) {
+    clearTimeout(buyArmed?.t);
+    buyArmed = { item: it.id, t: setTimeout(() => { buyArmed = null; renderShop(ST?.my); }, 5000) };
+    shopMsg(`${it.name}을(를) ${it.cost}P에 살까요? 한 번 더 누르면 사요.`);
+    renderShop(ST?.my); return;
+  }
+  clearTimeout(buyArmed.t); buyArmed = null; shopBusy = true; renderShop(ST?.my);
+  try {
+    const r = await api("buy", { item: it.id });
+    shopMsg(r.ok ? (it.id === "mystery" ? "미스터리 박스를 샀어요. 아래에서 카드 1장을 골라 여세요." : `${it.name}을(를) 샀어요. 선생님께 받아 가세요.`)
+      : r.error === "not_enough" ? "포인트가 부족해요." : "사지 못했어요. 잠시 뒤 다시 해 주세요.");
+  } catch { shopMsg("서버에 연결하지 못했어요."); }
+  shopBusy = false; await refresh();
+}
+function mysteryDeck(o) {
+  const wrap = document.createElement("div"); wrap.className = "mdeck";
+  const [code, pickStr] = String(o.deck || "").split(":");
+  const pick = Number(pickStr);
+  for (let i = 0; i < 10; i++) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "mcard"; b.id = `m-${o.id}-${i}`;
+    b.setAttribute("aria-label", `${i + 1}번 카드`);
+    if (o.result && code) {
+      const c = code[i]; b.disabled = true; b.classList.add(CARD_CLASS[c]); if (i === pick) b.classList.add("picked");
+      b.textContent = CARD_NAME[c];
+    } else { b.textContent = String(i + 1).padStart(2, "0"); b.disabled = shopBusy; b.addEventListener("click", () => openBox(o, i)); }
+    wrap.appendChild(b);
+  }
+  return wrap;
+}
+async function openBox(o, i) {
+  if (shopBusy) return; shopBusy = true; renderShop(ST?.my);
+  try {
+    const r = await api("openBox", { orderId: o.id, index: i });
+    shopMsg(!r.ok ? "카드를 열지 못했어요. 잠시 뒤 다시 해 주세요."
+      : r.result === "meal" ? "우선급식증 당첨! 이 화면을 선생님께 보여 주세요."
+      : r.result === "hold" ? "기습권 당첨! 아래에서 친구 4명을 골라 공부 시간을 5시간씩 멈출 수 있어요."
+      : "꽝이에요. 다음에 다시 도전해 봐요.");
+  } catch { shopMsg("서버에 연결하지 못했어요."); }
+  shopBusy = false; await refresh();
+}
+function holdPicker(o, my) {
+  const box = document.createElement("div"); box.style.display = "grid"; box.style.gap = "8px";
+  const info = document.createElement("p"); info.className = "muted";
+  info.textContent = o.uses > 0 ? `기습권: ${o.uses}명 더 고를 수 있어요. 고른 친구는 지금부터 5시간 동안 공부한 시간이 기록되지 않아요.` : "기습권을 모두 썼어요.";
+  box.appendChild(info);
+  if (o.uses > 0) {
+    const row = document.createElement("div"); row.className = "freeze-row";
+    const others = ST.list.filter(s => s.k !== my.key);
+    const g = document.createElement("select"), c = document.createElement("select"), n = document.createElement("select");
+    g.id = `hg-${o.id}`; c.id = `hc-${o.id}`; n.id = `hn-${o.id}`;
+    g.setAttribute("aria-label", "학년"); c.setAttribute("aria-label", "반"); n.setAttribute("aria-label", "번호");
+    const sync = () => {
+      setOptions(c, [...new Set(others.filter(s => s.g == g.value).map(s => s.c))].sort((a, b) => a - b), "반");
+      setOptions(n, others.filter(s => s.g == g.value && s.c == c.value).map(s => s.n).sort((a, b) => a - b), "번");
+    };
+    setOptions(g, [...new Set(others.map(s => s.g))].sort((a, b) => a - b), "학년"); sync();
+    g.addEventListener("change", sync); c.addEventListener("change", () => setOptions(n, others.filter(s => s.g == g.value && s.c == c.value).map(s => s.n).sort((a, b) => a - b), "번"));
+    const btn = document.createElement("button"); btn.type = "button"; btn.className = "btn"; btn.id = `hb-${o.id}`; btn.textContent = "5시간 멈추기";
+    btn.style.background = "var(--attack)"; btn.disabled = !others.length;
+    let armed = null;
+    btn.addEventListener("click", async () => {
+      if (!armed) { btn.textContent = "확정하기"; info.textContent = `${g.value}학년 ${c.value}반 ${n.value}번 친구의 공부 시간을 5시간 멈출까요? 한 번 더 누르면 확정돼요.`; armed = setTimeout(() => { armed = null; btn.textContent = "5시간 멈추기"; }, 5000); return; }
+      clearTimeout(armed); btn.disabled = true;
+      const MSG = { already: "이 기습권으로 이미 고른 친구예요.", no_left: "기습권을 모두 썼어요.", no_target: "그 번호의 친구를 찾지 못했어요." };
+      try {
+        const r = await api("hold", { orderId: o.id, grade: +g.value, cls: +c.value, num: +n.value });
+        shopMsg(r.ok ? `${g.value}학년 ${c.value}반 ${n.value}번 친구를 ${clockStr(r.until)}까지 멈췄어요.` : (MSG[r.error] || "멈추지 못했어요. 잠시 뒤 다시 해 주세요."));
+      } catch { shopMsg("서버에 연결하지 못했어요."); }
+      await refresh();
+    });
+    row.append(g, c, n, btn); box.appendChild(row);
+  }
+  if (o.holdTargets?.length) {
+    const chips = document.createElement("div"); chips.className = "chips";
+    o.holdTargets.forEach(h => { const s = document.createElement("span"); s.className = "chip"; s.textContent = `${keyLabel(h.target)} · ${clockStr(h.to)}까지`; chips.appendChild(s); });
+    box.appendChild(chips);
+  }
+  return box;
+}
 
 // ---------- 무전(알림) ----------
 const swReady = ("serviceWorker" in navigator && location.protocol.startsWith("http"))
